@@ -86,6 +86,7 @@ impl<'a> PatternParser<'a> {
             '?' | '*' | '+' => Err(LoneQuantifier {
                 location: self.location,
             }),
+            '.' => Ok(Wildcard),
             ch => Ok(Character { value: ch }),
         }
     }
@@ -196,6 +197,20 @@ mod tests {
                         quantifier: Quantifier::one_or_more(),
                     },
                 ],
+            })
+        );
+    }
+
+    #[test]
+    fn wildcard() {
+        let pattern = Pattern::try_from(".*");
+        assert_eq!(
+            pattern,
+            Ok(Pattern {
+                states: vec![State {
+                    matching: Wildcard,
+                    quantifier: Quantifier::zero_or_more(),
+                }],
             })
         );
     }
