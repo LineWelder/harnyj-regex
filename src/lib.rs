@@ -1,3 +1,4 @@
+use std::iter::Enumerate;
 use std::str::Chars;
 
 #[cfg_attr(test, derive(PartialEq, Eq, Debug))]
@@ -36,38 +37,68 @@ pub struct Pattern {
 #[cfg_attr(test, derive(Debug))]
 pub enum PatternParsingError {
     EmptyInput,
+    LoneQuantifier { location: usize },
 }
 
-fn parse_matching(chars: &mut Chars) -> Result<Matching, PatternParsingError> {
-    use Matching::*;
+struct PatternParser<'a> {
+    location: usize,
+    chars: Enumerate<Chars<'a>>,
+}
 
-    match chars.next().unwrap() {
-        ch => Ok(Character { value: ch }),
+impl<'a> PatternParser<'a> {
+    fn new(input: &'a str) -> Self {
+        PatternParser {
+            location: 0,
+            chars: input.chars().enumerate(),
+        }
     }
-}
 
-fn parse_state(chars: &mut Chars) -> Result<State, PatternParsingError> {
-    Ok(State {
-        matching: parse_matching(chars)?,
-        quantifier: Quantifier::exactly_one(),
-    })
+    fn next(&mut self) -> Option<char> {
+        let (next_location, next_char) = self.chars.next()?;
+        self.location = next_location;
+        Some(next_char)
+    }
+
+    fn peek(&self) -> Option<char> {
+        self.chars.clone().next().map(|x| x.1)
+    }
+
+    fn parse_matching(&mut self) -> Result<Matching, PatternParsingError> {
+        use Matching::*;
+        use PatternParsingError::*;
+
+        match self.next().unwrap() {
+            '?' | '*' | '+' => Err(LoneQuantifier { location: self.location }),
+            ch => Ok(Character { value: ch }),
+        }
+    }
+
+    fn parse_state(&mut self) -> Result<State, PatternParsingError> {
+        Ok(State {
+            matching: self.parse_matching()?,
+            quantifier: Quantifier::exactly_one(),
+        })
+    }
+
+    fn parse_pattern(&mut self) -> Result<Pattern, PatternParsingError> {
+        if self.peek().is_none() {
+            return Err(PatternParsingError::EmptyInput);
+        }
+
+        let mut states = vec![];
+        while self.peek().is_some() {
+            states.push(self.parse_state()?);
+        }
+
+        Ok(Pattern { states })
+    }
 }
 
 impl TryFrom<&str> for Pattern {
     type Error = PatternParsingError;
 
     fn try_from(input: &str) -> Result<Self, PatternParsingError> {
-        if input.is_empty() {
-            return Err(PatternParsingError::EmptyInput);
-        }
-
-        let mut chars = input.chars();
-        let mut states = vec![];
-        while chars.clone().next().is_some() {
-            states.push(parse_state(&mut chars)?);
-        }
-
-        Ok(Pattern { states })
+        PatternParser::new(input).parse_pattern()
     }
 }
 
