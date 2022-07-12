@@ -14,6 +14,21 @@ impl Quantifier {
             max: Some(1),
         }
     }
+
+    const fn zero_or_one() -> Self {
+        Quantifier {
+            min: 0,
+            max: Some(1),
+        }
+    }
+
+    const fn zero_or_more() -> Self {
+        Quantifier { min: 0, max: None }
+    }
+
+    const fn one_or_more() -> Self {
+        Quantifier { min: 1, max: None }
+    }
 }
 
 #[cfg_attr(test, derive(PartialEq, Eq, Debug))]
@@ -68,15 +83,29 @@ impl<'a> PatternParser<'a> {
         use PatternParsingError::*;
 
         match self.next().unwrap() {
-            '?' | '*' | '+' => Err(LoneQuantifier { location: self.location }),
+            '?' | '*' | '+' => Err(LoneQuantifier {
+                location: self.location,
+            }),
             ch => Ok(Character { value: ch }),
         }
+    }
+
+    fn parse_quantifier(&mut self) -> Quantifier {
+        let quantifier = match self.peek() {
+            Some('?') => Quantifier::zero_or_one(),
+            Some('*') => Quantifier::zero_or_more(),
+            Some('+') => Quantifier::one_or_more(),
+            _ => return Quantifier::exactly_one(),
+        };
+
+        self.next();
+        quantifier
     }
 
     fn parse_state(&mut self) -> Result<State, PatternParsingError> {
         Ok(State {
             matching: self.parse_matching()?,
-            quantifier: Quantifier::exactly_one(),
+            quantifier: self.parse_quantifier(),
         })
     }
 
@@ -129,6 +158,42 @@ mod tests {
                     State {
                         matching: Character { value: 'c' },
                         quantifier: Quantifier::exactly_one(),
+                    },
+                ],
+            })
+        );
+    }
+
+    #[test]
+    fn quantifier_in_the_beginning_is_error() {
+        let pattern = Pattern::try_from("?");
+        assert_eq!(pattern, Err(LoneQuantifier { location: 0 }));
+    }
+
+    #[test]
+    fn two_quantifiers_is_error() {
+        let pattern = Pattern::try_from("a?*b");
+        assert_eq!(pattern, Err(LoneQuantifier { location: 2 }));
+    }
+
+    #[test]
+    fn right_quantifiers() {
+        let pattern = Pattern::try_from("a?b*c+");
+        assert_eq!(
+            pattern,
+            Ok(Pattern {
+                states: vec![
+                    State {
+                        matching: Character { value: 'a' },
+                        quantifier: Quantifier::zero_or_one(),
+                    },
+                    State {
+                        matching: Character { value: 'b' },
+                        quantifier: Quantifier::zero_or_more(),
+                    },
+                    State {
+                        matching: Character { value: 'c' },
+                        quantifier: Quantifier::one_or_more(),
                     },
                 ],
             })
