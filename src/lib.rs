@@ -6,6 +6,15 @@ struct Quantifier {
     max: Option<usize>,
 }
 
+impl Quantifier {
+    const fn exactly_one() -> Self {
+        Quantifier {
+            min: 1,
+            max: Some(1),
+        }
+    }
+}
+
 #[cfg_attr(test, derive(PartialEq, Eq, Debug))]
 enum Matching {
     Character { value: char },
@@ -40,10 +49,7 @@ fn parse_matching(chars: &mut Chars) -> Result<Matching, PatternParsingError> {
 fn parse_state(chars: &mut Chars) -> Result<State, PatternParsingError> {
     Ok(State {
         matching: parse_matching(chars)?,
-        quantifier: Quantifier {
-            min: 1,
-            max: Some(1),
-        },
+        quantifier: Quantifier::exactly_one(),
     })
 }
 
@@ -83,24 +89,15 @@ mod tests {
                 states: vec![
                     State {
                         matching: Character { value: 'a' },
-                        quantifier: Quantifier {
-                            min: 1,
-                            max: Some(1)
-                        }
+                        quantifier: Quantifier::exactly_one(),
                     },
                     State {
                         matching: Character { value: 'b' },
-                        quantifier: Quantifier {
-                            min: 1,
-                            max: Some(1)
-                        }
+                        quantifier: Quantifier::exactly_one(),
                     },
                     State {
                         matching: Character { value: 'c' },
-                        quantifier: Quantifier {
-                            min: 1,
-                            max: Some(1)
-                        }
+                        quantifier: Quantifier::exactly_one(),
                     },
                 ],
             })
