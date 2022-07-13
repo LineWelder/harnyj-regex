@@ -1,7 +1,5 @@
-use crate::*;
+use crate::{cursor::Cursor, *};
 use std::ops::Range;
-use std::str::Chars;
-use std::slice;
 
 #[derive(PartialEq, Eq)]
 #[cfg_attr(test, derive(Debug))]
@@ -15,36 +13,31 @@ pub struct MatchingError {
     pub location: Range<usize>,
 }
 
-struct PatternMatcher<'a> {
-    chars: Chars<'a>,
-}
+struct PatternMatcher<'a>(Cursor<'a>);
 
 impl<'a> PatternMatcher<'a> {
-    fn new(string: &'a str) -> Self {
-        PatternMatcher { chars: string.chars() }
-    }
-
     fn check(&mut self, states: &[State]) -> Result<(), MatchingError> {
         use MatchingErrorType::*;
 
-        if states.is_empty() {
-            return if self.chars.clone().next().is_none() {
-                Ok(())
-            } else {
-                Err(MatchingError {
-                    r#type: ExtraCharacters,
-                    location: 0..self.chars.clone().count(),
-                })
-            };
+        if !states.is_empty() {
+            todo!();
         }
 
-        todo!();
+        if self.0.peek().is_none() {
+            Ok(())
+        } else {
+            let location = self.0.get_location();
+            Err(MatchingError {
+                r#type: ExtraCharacters,
+                location: location..(location + self.0.len_left()),
+            })
+        }
     }
 }
 
 impl Pattern {
     pub fn check(&self, string: &str) -> Result<(), MatchingError> {
-        PatternMatcher::new(string).check(&self.states)
+        PatternMatcher(Cursor::new(string)).check(&self.states)
     }
 }
 
