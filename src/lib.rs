@@ -1,5 +1,7 @@
+mod matching;
 mod parsing;
 
+pub use matching::*;
 pub use parsing::PatternParsingError;
 
 #[cfg_attr(test, derive(PartialEq, Eq, Debug))]
