@@ -1,3 +1,4 @@
+mod cursor;
 mod matching;
 mod parsing;
 

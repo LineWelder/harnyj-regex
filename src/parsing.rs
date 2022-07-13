@@ -1,6 +1,4 @@
-use std::iter::Enumerate;
-use std::str::Chars;
-use crate::*;
+use crate::{cursor::Cursor, *};
 
 #[derive(PartialEq, Eq)]
 #[cfg_attr(test, derive(Debug))]
@@ -8,36 +6,16 @@ pub enum PatternParsingError {
     LoneQuantifier { location: usize },
 }
 
-struct PatternParser<'a> {
-    location: usize,
-    chars: Enumerate<Chars<'a>>,
-}
+struct PatternParser<'a>(Cursor<'a>);
 
 impl<'a> PatternParser<'a> {
-    fn new(input: &'a str) -> Self {
-        PatternParser {
-            location: 0,
-            chars: input.chars().enumerate(),
-        }
-    }
-
-    fn next(&mut self) -> Option<char> {
-        let (next_location, next_char) = self.chars.next()?;
-        self.location = next_location;
-        Some(next_char)
-    }
-
-    fn peek(&self) -> Option<char> {
-        self.chars.clone().next().map(|x| x.1)
-    }
-
     fn parse_matching(&mut self) -> Result<Matching, PatternParsingError> {
         use Matching::*;
         use PatternParsingError::*;
 
-        match self.next().unwrap() {
+        match self.0.next().unwrap() {
             '?' | '*' | '+' => Err(LoneQuantifier {
-                location: self.location,
+                location: self.0.get_location(),
             }),
             '.' => Ok(Wildcard),
             ch => Ok(Character { value: ch }),
@@ -45,14 +23,14 @@ impl<'a> PatternParser<'a> {
     }
 
     fn parse_quantifier(&mut self) -> Quantifier {
-        let quantifier = match self.peek() {
+        let quantifier = match self.0.peek() {
             Some('?') => Quantifier::zero_or_one(),
             Some('*') => Quantifier::zero_or_more(),
             Some('+') => Quantifier::one_or_more(),
             _ => return Quantifier::exactly_one(),
         };
 
-        self.next();
+        self.0.next();
         quantifier
     }
 
@@ -65,7 +43,7 @@ impl<'a> PatternParser<'a> {
 
     fn parse_pattern(&mut self) -> Result<Pattern, PatternParsingError> {
         let mut states = vec![];
-        while self.peek().is_some() {
+        while self.0.peek().is_some() {
             states.push(self.parse_state()?);
         }
 
@@ -77,7 +55,7 @@ impl TryFrom<&str> for Pattern {
     type Error = PatternParsingError;
 
     fn try_from(input: &str) -> Result<Self, PatternParsingError> {
-        PatternParser::new(input).parse_pattern()
+        PatternParser(Cursor::new(input)).parse_pattern()
     }
 }
 
