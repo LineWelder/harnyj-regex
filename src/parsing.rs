@@ -5,7 +5,6 @@ use crate::*;
 #[derive(PartialEq, Eq)]
 #[cfg_attr(test, derive(Debug))]
 pub enum PatternParsingError {
-    EmptyInput,
     LoneQuantifier { location: usize },
 }
 
@@ -65,10 +64,6 @@ impl<'a> PatternParser<'a> {
     }
 
     fn parse_pattern(&mut self) -> Result<Pattern, PatternParsingError> {
-        if self.peek().is_none() {
-            return Err(PatternParsingError::EmptyInput);
-        }
-
         let mut states = vec![];
         while self.peek().is_some() {
             states.push(self.parse_state()?);
@@ -89,11 +84,6 @@ impl TryFrom<&str> for Pattern {
 #[cfg(test)]
 mod tests {
     use super::{Matching::*, PatternParsingError::*, *};
-
-    #[test]
-    fn empty_regex_is_error() {
-        assert_eq!(Pattern::try_from(""), Err(EmptyInput));
-    }
 
     #[test]
     fn simple_letters() {
