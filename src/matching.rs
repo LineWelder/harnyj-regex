@@ -1,5 +1,7 @@
 use crate::*;
 use std::ops::Range;
+use std::str::Chars;
+use std::slice;
 
 #[derive(PartialEq, Eq)]
 #[cfg_attr(test, derive(Debug))]
@@ -13,22 +15,36 @@ pub struct MatchingError {
     pub location: Range<usize>,
 }
 
-impl Pattern {
-    pub fn check(&self, string: &str) -> Result<(), MatchingError> {
+struct PatternMatcher<'a> {
+    chars: Chars<'a>,
+}
+
+impl<'a> PatternMatcher<'a> {
+    fn new(string: &'a str) -> Self {
+        PatternMatcher { chars: string.chars() }
+    }
+
+    fn check(&mut self, states: &[State]) -> Result<(), MatchingError> {
         use MatchingErrorType::*;
 
-        if self.states.is_empty() {
-            return if string.is_empty() {
+        if states.is_empty() {
+            return if self.chars.clone().next().is_none() {
                 Ok(())
             } else {
                 Err(MatchingError {
                     r#type: ExtraCharacters,
-                    location: 0..string.len(),
+                    location: 0..self.chars.clone().count(),
                 })
             };
         }
 
         todo!();
+    }
+}
+
+impl Pattern {
+    pub fn check(&self, string: &str) -> Result<(), MatchingError> {
+        PatternMatcher::new(string).check(&self.states)
     }
 }
 
