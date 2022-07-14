@@ -1,4 +1,4 @@
-use crate::{cursor::Cursor, *};
+use crate::{cursor::Cursor, Matching::*, *};
 use std::ops::Range;
 
 #[derive(PartialEq, Eq)]
@@ -23,6 +23,8 @@ pub struct MatchingError {
 
 struct PatternMatcher<'a>(Cursor<'a>);
 
+use MatchingErrorType::*;
+
 impl<'a> PatternMatcher<'a> {
     fn check_character_for(
         &mut self,
@@ -34,7 +36,7 @@ impl<'a> PatternMatcher<'a> {
             _ => {
                 let location = self.0.get_next_location();
                 Err(MatchingError {
-                    r#type: MatchingErrorType::UnexpectedCharacter { expected },
+                    r#type: UnexpectedCharacter { expected },
                     location: (location - 1)..location,
                 })
             }
@@ -50,8 +52,6 @@ impl<'a> PatternMatcher<'a> {
     }
 
     fn check_state(&mut self, state: &State) -> Result<(), MatchingError> {
-        use Matching::*;
-
         if state.quantifier.min != 1 || state.quantifier.max != Some(1) {
             todo!("Quantifiers other than exactly one");
         }
@@ -63,8 +63,6 @@ impl<'a> PatternMatcher<'a> {
     }
 
     fn check(&mut self, states: &[State]) -> Result<(), MatchingError> {
-        use MatchingErrorType::*;
-
         for state in states {
             self.check_state(state)?;
         }
