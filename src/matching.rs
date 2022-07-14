@@ -5,6 +5,7 @@ use std::ops::Range;
 #[cfg_attr(test, derive(Debug))]
 pub enum ExpectedCharacter {
     Specific(char),
+    Any,
 }
 
 #[derive(PartialEq, Eq)]
@@ -44,6 +45,10 @@ impl<'a> PatternMatcher<'a> {
         self.check_character_for(|x| x == expected, ExpectedCharacter::Specific(expected))
     }
 
+    fn check_wildcard(&mut self) -> Result<(), MatchingError> {
+        self.check_character_for(|_| true, ExpectedCharacter::Any)
+    }
+
     fn check_state(&mut self, state: &State) -> Result<(), MatchingError> {
         use Matching::*;
 
@@ -53,7 +58,7 @@ impl<'a> PatternMatcher<'a> {
 
         match state.matching {
             Character { value } => self.check_character(value),
-            _ => todo!("States other than Character"),
+            Wildcard => self.check_wildcard(),
         }
     }
 
@@ -146,6 +151,26 @@ mod tests {
             Err(MatchingError {
                 r#type: ExtraCharacters,
                 location: 3..4,
+            })
+        );
+    }
+
+    #[test]
+    fn wildcard() {
+        let pattern = Pattern::try_from("a.c").unwrap();
+        assert_eq!(pattern.check("auc"), Ok(()));
+    }
+
+    #[test]
+    fn wildcard_but_string_ends() {
+        let pattern = Pattern::try_from("ab.").unwrap();
+        assert_eq!(
+            pattern.check("ab"),
+            Err(MatchingError {
+                r#type: UnexpectedCharacter {
+                    expected: ExpectedCharacter::Any
+                },
+                location: 2..3,
             })
         );
     }
