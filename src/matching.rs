@@ -3,9 +3,15 @@ use std::ops::Range;
 
 #[derive(PartialEq, Eq)]
 #[cfg_attr(test, derive(Debug))]
+pub enum ExpectedCharacter {
+    Specific(char),
+}
+
+#[derive(PartialEq, Eq)]
+#[cfg_attr(test, derive(Debug))]
 pub enum MatchingErrorType {
     ExtraCharacters,
-    UnexpectedCharacter { expected: char },
+    UnexpectedCharacter { expected: ExpectedCharacter },
 }
 
 #[cfg_attr(test, derive(PartialEq, Eq, Debug))]
@@ -23,7 +29,9 @@ impl<'a> PatternMatcher<'a> {
             _ => {
                 let location = self.0.get_next_location();
                 Err(MatchingError {
-                    r#type: MatchingErrorType::UnexpectedCharacter { expected },
+                    r#type: MatchingErrorType::UnexpectedCharacter {
+                        expected: ExpectedCharacter::Specific(expected),
+                    },
                     location: (location - 1)..location,
                 })
             }
@@ -102,7 +110,9 @@ mod tests {
         assert_eq!(
             pattern.check("afc"),
             Err(MatchingError {
-                r#type: UnexpectedCharacter { expected: 'b' },
+                r#type: UnexpectedCharacter {
+                    expected: ExpectedCharacter::Specific('b')
+                },
                 location: 1..2,
             })
         );
@@ -114,7 +124,9 @@ mod tests {
         assert_eq!(
             pattern.check("ab"),
             Err(MatchingError {
-                r#type: UnexpectedCharacter { expected: 'c' },
+                r#type: UnexpectedCharacter {
+                    expected: ExpectedCharacter::Specific('c')
+                },
                 location: 2..3,
             })
         );
