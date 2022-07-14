@@ -23,19 +23,25 @@ pub struct MatchingError {
 struct PatternMatcher<'a>(Cursor<'a>);
 
 impl<'a> PatternMatcher<'a> {
-    fn check_character(&mut self, expected: char) -> Result<(), MatchingError> {
+    fn check_character_for(
+        &mut self,
+        predicate: impl Fn(char) -> bool,
+        expected: ExpectedCharacter,
+    ) -> Result<(), MatchingError> {
         match self.0.next() {
-            Some(ch) if ch == expected => Ok(()),
+            Some(ch) if predicate(ch) => Ok(()),
             _ => {
                 let location = self.0.get_next_location();
                 Err(MatchingError {
-                    r#type: MatchingErrorType::UnexpectedCharacter {
-                        expected: ExpectedCharacter::Specific(expected),
-                    },
+                    r#type: MatchingErrorType::UnexpectedCharacter { expected },
                     location: (location - 1)..location,
                 })
             }
         }
+    }
+
+    fn check_character(&mut self, expected: char) -> Result<(), MatchingError> {
+        self.check_character_for(|x| x == expected, ExpectedCharacter::Specific(expected))
     }
 
     fn check_state(&mut self, state: &State) -> Result<(), MatchingError> {
