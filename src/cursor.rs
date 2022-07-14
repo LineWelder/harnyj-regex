@@ -1,31 +1,29 @@
-use std::iter::Enumerate;
 use std::str::Chars;
 
 pub(crate) struct Cursor<'a> {
-    location: usize,
-    chars: Enumerate<Chars<'a>>,
+    chars: Chars<'a>,
+    consumed: usize,
 }
 
 impl<'a> Cursor<'a> {
     pub(crate) fn new(input: &'a str) -> Self {
         Cursor {
-            location: 0,
-            chars: input.chars().enumerate(),
+            chars: input.chars(),
+            consumed: 0,
         }
     }
 
     pub(crate) fn next(&mut self) -> Option<char> {
-        let (next_location, next_char) = self.chars.next()?;
-        self.location = next_location;
-        Some(next_char)
+        self.consumed += 1;
+        self.chars.next()
     }
 
     pub(crate) fn peek(&self) -> Option<char> {
-        self.chars.clone().next().map(|x| x.1)
+        self.chars.clone().next()
     }
 
-    pub(crate) fn get_location(&self) -> usize {
-        self.location
+    pub(crate) fn get_next_location(&self) -> usize {
+        self.consumed
     }
 
     pub(crate) fn len_left(&self) -> usize {

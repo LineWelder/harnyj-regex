@@ -15,7 +15,7 @@ impl<'a> PatternParser<'a> {
 
         match self.0.next().unwrap() {
             '?' | '*' | '+' => Err(LoneQuantifier {
-                location: self.0.get_location(),
+                location: self.0.get_next_location() - 1,
             }),
             '.' => Ok(Wildcard),
             ch => Ok(Character { value: ch }),

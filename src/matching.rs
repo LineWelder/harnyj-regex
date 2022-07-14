@@ -26,7 +26,7 @@ impl<'a> PatternMatcher<'a> {
         if self.0.peek().is_none() {
             Ok(())
         } else {
-            let location = self.0.get_location();
+            let location = self.0.get_next_location();
             Err(MatchingError {
                 r#type: ExtraCharacters,
                 location: location..(location + self.0.len_left()),
