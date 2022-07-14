@@ -5,6 +5,7 @@ use std::ops::Range;
 #[cfg_attr(test, derive(Debug))]
 pub enum MatchingErrorType {
     ExtraCharacters,
+    UnexpectedCharacter { expected: char },
 }
 
 #[cfg_attr(test, derive(PartialEq, Eq, Debug))]
@@ -16,11 +17,37 @@ pub struct MatchingError {
 struct PatternMatcher<'a>(Cursor<'a>);
 
 impl<'a> PatternMatcher<'a> {
+    fn check_character(&mut self, expected: char) -> Result<(), MatchingError> {
+        match self.0.next() {
+            Some(ch) if ch == expected => Ok(()),
+            _ => {
+                let location = self.0.get_next_location();
+                Err(MatchingError {
+                    r#type: MatchingErrorType::UnexpectedCharacter { expected },
+                    location: (location - 1)..location,
+                })
+            }
+        }
+    }
+
+    fn check_state(&mut self, state: &State) -> Result<(), MatchingError> {
+        use Matching::*;
+
+        if state.quantifier.min != 1 || state.quantifier.max != Some(1) {
+            todo!("Quantifiers other than exactly one");
+        }
+
+        match state.matching {
+            Character { value } => self.check_character(value),
+            _ => todo!("States other than Character"),
+        }
+    }
+
     fn check(&mut self, states: &[State]) -> Result<(), MatchingError> {
         use MatchingErrorType::*;
 
-        if !states.is_empty() {
-            todo!();
+        for state in states {
+            self.check_state(state)?;
         }
 
         if self.0.peek().is_none() {
@@ -59,6 +86,48 @@ mod tests {
             Err(MatchingError {
                 r#type: ExtraCharacters,
                 location: 0..4,
+            })
+        );
+    }
+
+    #[test]
+    fn simple_characters() {
+        let pattern = Pattern::try_from("abc").unwrap();
+        assert_eq!(pattern.check("abc"), Ok(()));
+    }
+
+    #[test]
+    fn wrong_character() {
+        let pattern = Pattern::try_from("abc").unwrap();
+        assert_eq!(
+            pattern.check("afc"),
+            Err(MatchingError {
+                r#type: UnexpectedCharacter { expected: 'b' },
+                location: 1..2,
+            })
+        );
+    }
+
+    #[test]
+    fn unexpected_end_of_string() {
+        let pattern = Pattern::try_from("abc").unwrap();
+        assert_eq!(
+            pattern.check("ab"),
+            Err(MatchingError {
+                r#type: UnexpectedCharacter { expected: 'c' },
+                location: 2..3,
+            })
+        );
+    }
+
+    #[test]
+    fn extra_characters() {
+        let pattern = Pattern::try_from("abc").unwrap();
+        assert_eq!(
+            pattern.check("abcd"),
+            Err(MatchingError {
+                r#type: ExtraCharacters,
+                location: 3..4,
             })
         );
     }
